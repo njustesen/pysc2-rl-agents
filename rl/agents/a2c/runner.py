@@ -6,7 +6,8 @@ from pysc2.lib.actions import TYPES as ACTION_TYPES
 
 from rl.pre_processing import Preprocessor
 from rl.pre_processing import is_spatial_action, stack_ndarray_dicts
-
+from rl.events.event_state import EventState
+from rl.events.event_memory import EventMemory
 
 class A2CRunner():
   def __init__(self,
@@ -15,7 +16,8 @@ class A2CRunner():
                summary_writer=None,
                train=True,
                n_steps=8,
-               discount=0.99):
+               discount=0.99,
+               event_based=False):
     """
     Args:
       agent: A2CAgent instance.
@@ -34,6 +36,8 @@ class A2CRunner():
     self.preproc = Preprocessor(self.envs.observation_spec()[0])
     self.episode_counter = 0
     self.cumulative_score = 0.0
+    self.event_based = event_based
+    self.event_memory = EventMemory(504, 1000)
 
   def reset(self):
     obs_raw = self.envs.reset()
@@ -66,11 +70,15 @@ class A2CRunner():
     values = np.zeros(shapes, dtype=np.float32)
     rewards = np.zeros(shapes, dtype=np.float32)
     dones = np.zeros(shapes, dtype=np.float32)
+
     all_obs = []
     all_actions = []
     all_scores = []
 
     last_obs = self.last_obs
+
+    if self.event_based:
+      event_states = [EventState(obs) for obs in last_obs]
 
     for n in range(self.n_steps):
       actions, value_estimate = self.agent.step(last_obs)
@@ -86,6 +94,16 @@ class A2CRunner():
       last_obs = self.preproc.preprocess_obs(obs_raw)
       rewards[n, :] = [t.reward for t in obs_raw]
       dones[n, :] = [t.last() for t in obs_raw]
+
+      if self.event_based:
+        for i in range(obs_raw):
+          if not dones[n][i]:
+            events = event_states[i].update(obs_raw[i])
+            event_reward = self.event_memory.get_event_rewards(events)
+            rewards[n][i] = event_reward
+          else:
+            self.event_memory.record_events(event_states[i].get_events())
+            event_states[i].reset()
 
       for t in obs_raw:
         if t.last():

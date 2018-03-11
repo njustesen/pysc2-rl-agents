@@ -24,17 +24,19 @@ parser.add_argument('experiment_id', type=str,
                     help='identifier to store experiment results')
 parser.add_argument('--eval', action='store_true',
                     help='if false, episode scores are evaluated')
+parser.add_argument('--event_based', action='store_true', default=False,
+                    help='Train with event-based rewards')
 parser.add_argument('--ow', action='store_true',
                     help='overwrite existing experiments (if --train=True)')
-parser.add_argument('--map', type=str, default='MoveToBeacon',
+parser.add_argument('--map', type=str, default='CollectMineralShards',
                     help='name of SC2 map')
 parser.add_argument('--vis', action='store_true',
                     help='render with pygame')
 parser.add_argument('--max_windows', type=int, default=1,
                     help='maximum number of visualization windows to open')
-parser.add_argument('--res', type=int, default=32,
+parser.add_argument('--res', type=int, default=8,
                     help='screen and minimap resolution')
-parser.add_argument('--envs', type=int, default=32,
+parser.add_argument('--envs', type=int, default=8,
                     help='number of environments simulated in parallel')
 parser.add_argument('--step_mul', type=int, default=8,
                     help='number of game steps per agent step')
